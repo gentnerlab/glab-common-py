@@ -1,6 +1,6 @@
 import scipy.io as sio
 
-def loadmat(filename):
+def load_mat(filename):
     '''
     this function should be called instead of direct spio.loadmat
     as it cures the problem of not properly recovering python dictionaries
@@ -32,3 +32,30 @@ def _todict(matobj):
         else:
             dict[strg] = elem
     return dict
+
+def load_rDAT(fin,nheaderrows = 0,fmt=None):
+    from numpy import genfromtxt
+    if fmt == None: #replace with your own rdat format
+        fmt = [('session','i4'),
+               ('trial','i4'),
+               ('correction','b'),
+               ('stimulus','a64'),
+               ('class','i4'),
+               ('R_sel','i4'),
+               ('R_acc','i4'),
+               ('ReactionTime','f4'),
+               ('Reinforced','b'),
+               ('TimeOfDay','i4'),
+               ('Date','i4'),
+               ];
+    
+    if nheaderrows > 100:
+        raise ValueError('Recursively found more than 100 header rows.')
+    
+    while True:
+        try:
+            data = genfromtxt(fin,dtype=fmt,invalid_raise=False,skip_header=nheaderrows)
+            return data
+        except ValueError:
+            data = readRdat(fin,nheaderrows = nheaderrows+1)
+            return data
