@@ -1,4 +1,5 @@
 import scipy.io as sio
+import numpy as np
 
 def load_mat(filename):
     '''
@@ -18,7 +19,7 @@ def _check_keys(dict):
     for key in dict:
         if isinstance(dict[key], sio.matlab.mio5_params.mat_struct):
             dict[key] = _todict(dict[key])
-    return dict        
+    return dict
 
 def _todict(matobj):
     '''
@@ -34,7 +35,6 @@ def _todict(matobj):
     return dict
 
 def load_rDAT(fin,nheaderrows = 0,fmt=None):
-    from numpy import genfromtxt
     if fmt == None: #replace with your own rdat format
         fmt = [('session','i4'),
                ('trial','i4'),
@@ -48,13 +48,12 @@ def load_rDAT(fin,nheaderrows = 0,fmt=None):
                ('TimeOfDay','i4'),
                ('Date','i4'),
                ];
-    
-    if nheaderrows > 100:
-        raise ValueError('Recursively found more than 100 header rows.')
-    
+
+    assert nheaderrows < 100, 'Recursively found more than 100 header rows.'
+
     while True:
         try:
-            data = genfromtxt(fin,dtype=fmt,invalid_raise=False,skip_header=nheaderrows)
+            data = np.genfromtxt(fin,dtype=fmt,invalid_raise=False,skip_header=nheaderrows)
             return data
         except ValueError:
             data = readRdat(fin,nheaderrows = nheaderrows+1)
