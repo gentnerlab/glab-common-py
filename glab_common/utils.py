@@ -38,23 +38,22 @@ def load_rDAT(fin,nheaderrows = 0,fmt=None):
     if fmt == None: #replace with your own rdat format
         fmt = [('session','i4'),
                ('trial','i4'),
-               ('correction','b'),
+               ('normal','b'),
                ('stimulus','a64'),
                ('class','i4'),
                ('R_sel','i4'),
                ('R_acc','i4'),
                ('ReactionTime','f4'),
                ('Reinforced','b'),
-               ('TimeOfDay','i4'),
-               ('Date','i4'),
+               ('TimeOfDay','a8'),
+               ('Date','a8'),
                ];
 
-    assert nheaderrows < 100, 'Recursively found more than 100 header rows.'
-
     while True:
+        if nheaderrows > 100:
+            raise ValueError('Recursively found more than 100 header rows.')
         try:
             data = np.genfromtxt(fin,dtype=fmt,invalid_raise=False,skip_header=nheaderrows)
             return data
         except ValueError:
-            data = readRdat(fin,nheaderrows = nheaderrows+1)
-            return data
+            nheaderrows += 1
