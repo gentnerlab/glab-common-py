@@ -128,7 +128,8 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
             print 'data not found for %s' % (subj)
     if force_boolean:
         for subj in subjects:
-            behav_data[subj][force_boolean] = behav_data[subj][force_boolean].astype(bool)
+            for forced in force_boolean:
+                behav_data[subj][forced] = behav_data[subj][forced].map(lambda(x): x in [True, 'True', 'true', 1, '1'])
     return behav_data
 
 ## http://stackoverflow.com/questions/13059011/is-there-any-python-function-library-for-calculate-binomial-confidence-intervals
