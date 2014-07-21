@@ -205,6 +205,86 @@ def binomial_ci(vx, vN, vCL = 95):
         ul = v
     return (dl, ul)
 
+def binomial_ci_array(vx, vN, vCL = 95):
+    assert vx.shape == vN.shape
+    it = np.nditer([vx, vN, None, None])
+    for x, y, dl, ul in it:
+        dl[...], ul[...] = binomial_ci(x, y, vCL)
+    return (it.operands[2], it.operands[3])
+
+def plot_accuracy(subj, df, blocked_by_day=True, block_size=200):
+    data_to_analyze = df[(df.response<>'none')&(df.type_=='normal')&(df.index>(dt.datetime.today()-dt.timedelta(weeks=1)))]
+    
+    if blocked_by_day:
+        blocked = data_to_analyze.groupby(lambda x: (x.date()-dt.datetime.now().date()).days)
+    else:
+        data_to_analyze = data_to_analyze.reset_index()
+        
+        blocks = data_to_analyze.index / block_size
+        blocked = data_to_analyze.groupby(blocks)
+    
+    
+    correct = blocked['correct'].agg({'correct': lambda x: np.mean(x.astype(float))})
+    correct.plot()
+
+    if blocked_by_day:
+        days = np.sort(blocked.groups.keys())
+        trials_per_day = blocked['response'].count().values
+        lci, uci = binomial_ci_array(1.0/2.0*trials_per_day,trials_per_day)
+        plt.plot(days, lci, color='grey',alpha=0.5)
+        plt.plot(days, uci, color='grey',alpha=0.5)
+        plt.xlabel('day')
+    else:
+        ci = binomial_ci(1.0/2.0*block_size,block_size)
+        plt.axhspan(ci[0],ci[1],color='grey',alpha=0.5)
+        plt.axhline(1.0/2.0,linestyle=':') 
+        plt.xlabel('block')
+    
+    plt.ylim([0,1.0])
+    plt.title(subj)
+    plt.ylabel('accuracy')
+    
+def plot_bias(subj, df, blocked_by_day=True, block_size=200):
+    data_to_analyze = df[(df.response<>'none')&(df.type_=='normal')&(df.index>(dt.datetime.today()-dt.timedelta(weeks=1)))]
+    
+    if blocked_by_day:
+        blocked = data_to_analyze.groupby(lambda x: (x.date()-dt.datetime.now().date()).days)
+        days = np.sort(blocked.groups.keys())
+        trials_per_day = blocked['response'].count().values
+        lci, uci = binomial_ci_array(1.0/2.0*trials_per_day,trials_per_day)
+    else:
+        ci = binomial_ci(1.0/2.0*block_size,block_size)
+        data_to_analyze = data_to_analyze.reset_index()
+        
+        blocks = data_to_analyze.index / block_size
+        blocked = data_to_analyze.groupby(blocks)
+    
+    response_set = set(['R','L','C']).intersection(set(df['response']))
+    # Definitely bad form, do not use where there is a possibility of hacking
+    def bias_maker(response):
+        import numpy as np
+        exec """def %s_bias(x):
+            return np.mean((x=="%s").astype(float))""" % (response, response) in locals()
+        return eval("%s_bias" % (response))
+
+    bias_funcs = [bias_maker(resp) for resp in response_set]
+    bias = blocked['response'].agg(bias_funcs)
+    bias.plot()
+
+    if blocked_by_day:
+        plt.plot(days, lci, color='grey',alpha=0.5)
+        plt.plot(days, uci, color='grey',alpha=0.5)
+        plt.xlabel('day')
+    else:
+        plt.axhspan(ci[0],ci[1],color='grey',alpha=0.5)
+        plt.axhline(1.0/2.0,linestyle=':') 
+        plt.xlabel('block')
+
+
+    plt.ylim([0,1.0])
+    plt.title(subj)
+    plt.ylabel('bias')
+
 def vinjegallant(response):
 
     R = np.asarray(response[:])
