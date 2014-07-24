@@ -4,6 +4,7 @@ import glob
 import pandas as pd
 import datetime as dt
 import os
+import matplotlib.pyplot as plt
 
 def load_mat(filename):
     '''
@@ -214,3 +215,36 @@ def vinjegallant(response):
     S = (1 - A) / (1 - 1/n)
     
     return S
+
+
+#perc corr broken out by stimulus and day. input how many days you want to look at into "days" argument
+#stims_all is a list of all stimuli in the order you want them displayed
+def accperstimplot(subj,df,days=7,stims_all=None):
+    data_to_analyze = df[(df.response!='none')&(df.type_=='normal')&(df.index>(dt.datetime.today()-dt.timedelta(days=days)))]
+    #get any stims that have been shown to bird
+    if not stims_all:
+        stims_all = sorted(list(set(data_to_analyze.stimulus)))
+    #stims = list(set(data_day.stimulus))
+    blocked = data_to_analyze.groupby([lambda x: (dt.datetime.now().date()-x.date()).days, data_to_analyze.stimulus])
+    aggregated = blocked.agg({'correct': lambda x: np.mean(x.astype(float))})
+    days_passed = np.arange(days)
+    stim_number = np.arange(len(stims_all))
+    
+    plt.figure()
+    plt.subplot(1,2,2)
+    cmap = plt.get_cmap('Oranges')
+    cmap.set_bad(color = 'k', alpha = 0.5)
+    correct = np.zeros((len(days_passed),len(stim_number)),np.float_)
+    
+    for day in days_passed:
+        for st in stim_number:
+            try:
+                correct[day,st] = aggregated['correct'][day,str(stims_all[st])]
+            except KeyError:
+                correct[day,st] = np.nan
+    correct = np.ma.masked_invalid(correct)
+    plt.pcolormesh(np.rot90(np.fliplr(correct),k=3),cmap=cmap,vmin=0, vmax=1)
+    plt.colorbar()
+    plt.title(subj)
+    plt.xlabel('day')
+    plt.ylabel('stim')
