@@ -3,13 +3,14 @@ import re
 import datetime as dt
 from glab_common.utils import load_data_pandas
 from socket import gethostname
+import warnings
 
 if 'zog' in gethostname():
-	process_fname = "/home/bird/bin/perltools/zbox_bird_process"
+    process_fname = "/home/bird/bin/perltools/zbox_bird_process"
 elif 'vogel' in gethostname():
-	process_fname = "/home/bird/bin/perltools/vbox_bird_process"
+    process_fname = "/home/bird/bin/perltools/vbox_bird_process"
 else:
-	raise Exception('process_fname not defined for host: %s' % (gethostname))
+    raise Exception('process_fname not defined for host: %s' % (gethostname))
 
 inf = open(process_fname, 'rt')
 
@@ -28,7 +29,6 @@ for line in inf.readlines():
             processes.append(spl_line[4])
 
 inf.close()
-
 subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
 # load all data
@@ -109,4 +109,3 @@ for (box, bird, proc) in zip(box_nums, bird_nums, processes):
         #print e
 
 f.close()
-
