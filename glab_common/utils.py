@@ -154,25 +154,25 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
 
             for data_f in data_files:
                 nheaderrows = 1
-                try:
-                    df = pd.read_csv(data_f,
-                                     parse_dates={'date':['Date','Time']},
-                                     date_parser=_parse,
-                                     )
-                    df.rename(columns=col_map, inplace=True)
-                    df.set_index('date',inplace=True)
-                    df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x]) 
-                    df['correct'] = df['ResponseAccuracy'].map(lambda(x): [False, True, float('nan')][x])
-                    df['reward'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == True, axis=1)
-                    df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
-                    df['class_'] = df['StimClass'].map(lambda(x): ['none', 'L', 'R'][x])
-                    df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
+                # try:
+                df = pd.read_csv(data_f,
+                                 parse_dates={'date':['Date','Time']},
+                                 date_parser=_parse,
+                                 )
+                df.rename(columns=col_map, inplace=True)
+                df.set_index('date',inplace=True)
+                df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x]) 
+                df['correct'] = df['ResponseAccuracy'].map(lambda(x): [False, True, float('nan')][x])
+                df['reward'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == True, axis=1)
+                df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
+                df['class_'] = df['StimClass'].map(lambda(x): ['none', 'L', 'R'][x])
+                df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
 
-                    df_set.append(df)
-                    (force_boolean.append(x) for x in ['NeuralRecording','BehavioralRecording'])
+                df_set.append(df)
+                (force_boolean.append(x) for x in ['NeuralRecording','BehavioralRecording'])
 
-                except ValueError:
-                    df = None
+                # except ValueError:
+                #     df = None
         if df_set:
             behav_data[subj] = pd.concat(df_set)
         else:
