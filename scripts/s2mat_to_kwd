@@ -127,9 +127,6 @@ def read_s2mat(mat,site_map):
         
     return data
 
-def write_kwd(data,rec,kwd_f):
-    grp = kwd_f.create_group('recordings/%i' % rec)
-    dset = grp.create_dataset('data', data=data)
 
 def get_args():
 
@@ -166,14 +163,14 @@ def main():
 
     # open KWD file (destination HDF5)
     print 'Opening %s' % kwd
-    with h5.File(kwd, 'w') as kwd_f, open(args.mat_list,'r') as mlist_f:
+    with h5.File(kwd, 'wb') as kwd_f, open(args.mat_list,'r') as mlist_f:
         # for each mat file in the list
         for rec, mat in enumerate(mlist_f):
             mat = mat.strip()
             # read in data from MAT and write to KWD
             print 'Copying %s into Recording/%s' % (mat,rec)
             data = read_s2mat(mat,SITEMAP[args.probe])
-            write_kwd(data,rec,kwd_f)
+            kwd_f.create_dataset('recordings/%i/data' % rec, data=data)
 
             # grab parameters from first MAT file
             if rec == 0:
@@ -182,7 +179,7 @@ def main():
 
 
     # write the parameters
-    with open(params['exp']+'.prm', 'w') as pf:
+    with open('params.prm', 'w') as pf:
         pf.write(PARAMS_TEMPLATE.format(**params))
 
 if __name__ == '__main__':
