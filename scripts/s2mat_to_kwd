@@ -1,0 +1,189 @@
+#!/usr/bin/env python
+import argparse, os
+import h5py as h5
+import numpy as np
+
+# assume spike2 export to mat with the following parameters:
+# - aligned starts
+# - all chans same length
+# - channel names are "Port_N" where N is the 1-indexed 1401 Port number (and, hopefully, electrode site)
+
+SITEMAP = {
+    'A1x16-5mm50': {
+        0: 6,
+        1: 11,
+        2: 3,
+        3: 14,
+        4: 1,
+        5: 16,
+        6: 2,
+        7: 15,
+        8: 5,
+        9: 12,
+        10: 4,
+        11: 13,
+        12: 7,
+        13: 10,
+        14: 8,
+        15: 9,
+        },
+    }
+
+PARAMS_TEMPLATE = """
+##########################
+# SpikeDetekt parameters #
+##########################
+
+experiment_name = {exp}
+raw_data_files = experiment_name + '.raw.kwd'
+prb_file = '{probe}.prb'
+nbits = 16
+voltage_gain = 10.
+
+sample_rate = {fs}
+nchannels = {nchan}
+
+
+# Filtering
+# ---------
+filter_low = 500. # Low pass frequency (Hz)
+filter_high = 0.95 * .5 * sample_rate
+filter_butter_order = 3  # Order of Butterworth filter.
+
+filter_lfp_low = 0  # LFP filter low-pass frequency
+filter_lfp_high = 300  # LFP filter high-pass frequency
+
+
+# Chunks
+# ------
+chunk_size = int(1. * sample_rate)  # 1 second
+chunk_overlap = int(.015 * sample_rate)  # 15 ms
+
+# Spike detection
+# ---------------
+# Uniformly scattered chunks, for computing the threshold from the std of the
+# signal across the whole recording.
+nexcerpts = 50
+excerpt_size = int(1. * sample_rate)
+threshold_strong_std_factor = 4.5
+threshold_weak_std_factor = 2.
+detect_spikes = 'negative'
+#precomputed_threshold = None
+
+# Connected component
+# -------------------
+connected_component_join_size = int(.00005 * sample_rate)
+    
+# Spike extraction
+# ----------------
+extract_s_before = 16
+extract_s_after = 16
+waveforms_nsamples = extract_s_before + extract_s_after
+
+# Features
+# --------
+nfeatures_per_channel = 8  # Number of features per channel.
+pca_nwaveforms_max = 10000
+
+
+#########################
+# KlustaKwik parameters #
+#########################
+MaskStarts = 100
+#MinClusters = 100 
+#MaxClusters = 110
+MaxPossibleClusters =  500
+FullStepEvery =  10
+MaxIter = 10000
+RandomSeed =  654
+Debug = 0
+SplitFirst = 20 
+SplitEvery = 100 
+PenaltyK = 0
+PenaltyKLogN = 1
+Subset = 1
+PriorPoint = 1
+SaveSorted = 0
+SaveCovarianceMeans = 0
+UseMaskedInitialConditions = 1 
+AssignToFirstClosestMask = 1
+UseDistributional = 1
+"""
+
+def read_s2mat(mat,site_map):
+    with h5.File(mat, 'r') as f_in:
+        n_samp = np.inf
+
+        for ch, site in site_map.iteritems():
+            length = f_in['Port_%s' % site]['length'][0,0]
+            if n_samp > length:
+                n_samp = length
+
+        shape = (n_samp,len(site_map)) # samples,channels
+        data = np.empty(shape,np.int16)
+
+        for ch, site in site_map.iteritems():
+            data[:,ch] = f_in['Port_%s' % site]['values'][0,:]
+        
+    return data
+
+def write_kwd(data,rec,kwd_f):
+    grp = kwd_f.create_group('recordings/%i' % rec)
+    dset = grp.create_dataset('data', data=data)
+
+def get_args():
+
+    parser = argparse.ArgumentParser(description='Compile Spike2 epoch .mat files into KlustaKwik KWD file.')
+    parser.add_argument('mat_list', 
+                       help='a text file listing all of the mat files to compile')
+    parser.add_argument('probe', default='A1x16-5mm50',
+                       help='probe (edit this file to fix mappings)')
+
+    return parser.parse_args()
+
+def get_fs_from_mat(mat):
+    with h5.File(mat, 'r') as f:
+        for ch in range(48):
+            try:
+                fs =  1 / f['Port_%i' % ch]['interval'][0][0]
+                return fs
+            except KeyError:
+                pass
+
+
+def main():
+    args = get_args()
+
+    # get experiment info from file structure
+    subj, _, pen, site = os.getcwd().split('/')[-4:]
+    exp = '_'.join((subj,pen,site))
+    kwd = exp + '.raw.kwd'
+
+    params = {
+        'probe': args.probe,
+        'exp': exp,
+        }
+
+    # open KWD file (destination HDF5)
+    print 'Opening %s' % kwd
+    with h5.File(kwd, 'w') as kwd_f, open(args.mat_list,'r') as mlist_f:
+        # for each mat file in the list
+        for rec, mat in enumerate(mlist_f):
+            mat = mat.strip()
+            # read in data from MAT and write to KWD
+            print 'Copying %s into Recording/%s' % (mat,rec)
+            data = read_s2mat(mat,SITEMAP[args.probe])
+            write_kwd(data,rec,kwd_f)
+
+            # grab parameters from first MAT file
+            if rec == 0:
+                params['fs'] = get_fs_from_mat(mat)
+                params['nchans'] = data.shape[1]
+
+
+    # write the parameters
+    with open(params['exp']+'.prm', 'w') as pf:
+        pf.write(PARAMS_TEMPLATE.format(**params))
+
+if __name__ == '__main__':
+    main()
