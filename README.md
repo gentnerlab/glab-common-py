@@ -24,6 +24,6 @@ There are two scripts which will get your data from [probe-the-broab](https://gi
 2. (optional) Edit the generated `.prm` file to tweak any parameters
 3. Copy the necessary probe file into the Site directory (TODO: do this in the script)
 4. `source activate klusta` to enter into the klustakwik conda environment
-4. `klusta` will run spike detection and clustering
+4. `klusta params.prm` will run spike detection and clustering
 5. `klustaviewa` will launch the GUI to combine and rate clusters. [The DeWeese Lab has a nice HowTo for this final part of spike sorting](http://deweeselab.berkeley.edu/Home/research-interests/spike-sorting). 
 
