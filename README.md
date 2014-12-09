@@ -10,7 +10,7 @@ currently implemented functions:
 
 ## Klustakwik helper scripts
 
-There are two scripts which will get your data from [probe-the-broab](https://github.com/gentnerlab/probe-the-broab) into the KWD format that KlustaKwik requires. These are assuming you are working on lintu, where a common klustakwik installation is running for the lab to use.
+There are two scripts which will get your data from [probe-the-broab](https://github.com/gentnerlab/probe-the-broab) into the KWD format that KlustaKwik requires. These are assuming you are running the analysis on lintu, where klustakwik is installed for the lab to use. You can download the latest [`KlustaViewa` release here](https://github.com/klusta-team/klustaviewa/releases) to install on a local machine.
 
 ### Determine which Epoch files to compile for spike sorting
 
@@ -25,5 +25,5 @@ There are two scripts which will get your data from [probe-the-broab](https://gi
 3. Copy the necessary probe file into the Site directory (TODO: do this in the script)
 4. `source activate klusta` to enter into the klustakwik conda environment
 4. `klusta` will run spike detection and clustering
-5. `klustaviewa` will launch the GUI to combine and rate clusters. [The DeWeese Lab has a nice HowTo for this final part of spike sorting](http://deweeselab.berkeley.edu/Home/research-interests/spike-sorting).
+5. `klustaviewa` will launch the GUI to combine and rate clusters. [The DeWeese Lab has a nice HowTo for this final part of spike sorting](http://deweeselab.berkeley.edu/Home/research-interests/spike-sorting). 
 
