@@ -39,7 +39,7 @@ PARAMS_TEMPLATE = """
 
 # Name of the experiment (which will be the name of the output KWIK
 # files)
-experiment_name = {exp}
+experiment_name = '{exp}'
 
 # Raw data files. These can be in .dat/.bin/any raw data format,
 # or .kwd HDF5 KWIK format. You can pass a list of several files which
@@ -170,7 +170,7 @@ nfeatures_per_channel = 8
 
 # The largest permitted number of clusters, so cluster splitting can produce
 # no more than n clusters. Note: This must be set higher than MaskStarts.
-KK_MaxPossibleClusters = 200
+KK_MaxPossibleClusters = 300
 
 # Maximum number of iterations. ie. it won't try more than n iterations
 # from any starting point.
@@ -178,7 +178,7 @@ KK_MaxPossibleClusters = 200
 
 # You can start with a chosen fixed number of clusters derived from the
 # mask vectors, set by KK_MaskStarts.
-KK_MaskStarts = 50
+KK_MaskStarts = 300
 
 # The number of iterations after which KlustaKwik first attempts to split
 # existing clusters. KlustaKwik then splits every SplitEvery iterations.
@@ -380,7 +380,7 @@ def main():
             # grab parameters from first MAT file
             if rec == 0:
                 params['fs'] = get_fs_from_mat(mat,CHANMAP[args.probe])
-                params['nchans'] = data.shape[1]
+                params['nchan'] = data.shape[1]
 
 
     # write the parameters
