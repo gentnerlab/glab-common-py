@@ -116,8 +116,8 @@ nchannels = {nchan}
 
 # This is then used to calculate a base threshold which is multiplied
 # by the two parameters below for the two-threshold detection process.
-threshold_strong_std_factor = 6
-threshold_weak_std_factor = 2.
+threshold_strong_std_factor = 6.0
+threshold_weak_std_factor = 3.5
 
 # ---------------------------------------------------------------------   
 # Spike extraction
@@ -127,7 +127,7 @@ threshold_weak_std_factor = 2.
 # spike for waveforms. Then, waveforms_nsamples is calculated using the
 # formula: waveforms_nsamples = extract_s_before + extract_s_after
 extract_s_before = 8
-extract_s_after = 24
+extract_s_after = 12
 
 # ---------------------------------------------------------------------
 # Features
@@ -327,8 +327,8 @@ def read_s2mat(mat,site_map):
         shape = (n_samp,len(site_map)) # samples,channels
         data = np.empty(shape,np.int16)
 
-        for ch, site in site_map.iteritems():
-            data[:,ch] = f_in['Port_%s' % site]['values'][0,:]
+        for ch, site in enumerate(site_map):
+            data[:,ch] = f_in[site]['values'][0,:]
         
     return data
 
@@ -345,7 +345,7 @@ def get_args():
 
 def get_fs_from_mat(mat,site_map):
     with h5.File(mat, 'r') as f:
-        for ch in sitemap:
+        for ch in site_map:
             try:
                 fs =  1 / f[ch]['interval'][0][0]
                 return fs
