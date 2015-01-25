@@ -116,8 +116,8 @@ nchannels = {nchan}
 
 # This is then used to calculate a base threshold which is multiplied
 # by the two parameters below for the two-threshold detection process.
-#threshold_strong_std_factor = 4
-#threshold_weak_std_factor = 2.
+threshold_strong_std_factor = 6
+threshold_weak_std_factor = 2.
 
 # ---------------------------------------------------------------------   
 # Spike extraction
@@ -126,8 +126,8 @@ nchannels = {nchan}
 # The number of samples to extract before and after the centre of the
 # spike for waveforms. Then, waveforms_nsamples is calculated using the
 # formula: waveforms_nsamples = extract_s_before + extract_s_after
-#extract_s_before = 16
-#extract_s_after = 16
+extract_s_before = 8
+extract_s_after = 24
 
 # ---------------------------------------------------------------------
 # Features
@@ -368,7 +368,7 @@ def main():
 
     # open KWD file (destination HDF5)
     print 'Opening %s' % kwd
-    with h5.File(kwd, 'wb') as kwd_f, open(args.mat_list,'r') as mlist_f:
+    with h5.File(kwd, 'w') as kwd_f, open(args.mat_list,'r') as mlist_f:
         # for each mat file in the list
         for rec, mat in enumerate(mlist_f):
             mat = mat.strip()
