@@ -1,38 +1,3 @@
-#!/usr/bin/env python
-import argparse, os
-import h5py as h5
-import numpy as np
-
-# assume spike2 export to mat with the following parameters:
-# - aligned starts
-# - all chans same length
-# - channel names are "Port_N" where N is the 1-indexed 1401 Port number (and, hopefully, electrode site)
-
-
-# for each electrode, we need a list of channel names.
-# list indices correspond to indices in the KWD array
-CHANMAP = { 
-    'A1x16-5mm50': [
-        'Port_6',
-        'Port_11',
-        'Port_3',
-        'Port_14',
-        'Port_1',
-        'Port_16',
-        'Port_2',
-        'Port_15',
-        'Port_5',
-        'Port_12',
-        'Port_4',
-        'Port_13',
-        'Port_7',
-        'Port_10',
-        'Port_8',
-        'Port_9',
-        ]
-    }
-
-PARAMS_TEMPLATE = """
 #######################################################################
 # SpikeDetekt parameters 
 #######################################################################
@@ -116,8 +81,8 @@ nchannels = {nchan}
 
 # This is then used to calculate a base threshold which is multiplied
 # by the two parameters below for the two-threshold detection process.
-threshold_strong_std_factor = 6.0
-threshold_weak_std_factor = 3.5
+threshold_strong_std_factor = 5.0
+threshold_weak_std_factor = 2.0
 
 # ---------------------------------------------------------------------   
 # Spike extraction
@@ -126,8 +91,8 @@ threshold_weak_std_factor = 3.5
 # The number of samples to extract before and after the centre of the
 # spike for waveforms. Then, waveforms_nsamples is calculated using the
 # formula: waveforms_nsamples = extract_s_before + extract_s_after
-extract_s_before = 8
-extract_s_after = 12
+extract_s_before = 6
+extract_s_after = 14
 
 # ---------------------------------------------------------------------
 # Features
@@ -170,7 +135,7 @@ nfeatures_per_channel = 8
 
 # The largest permitted number of clusters, so cluster splitting can produce
 # no more than n clusters. Note: This must be set higher than MaskStarts.
-KK_MaxPossibleClusters = 300
+KK_MaxPossibleClusters = 500
 
 # Maximum number of iterations. ie. it won't try more than n iterations
 # from any starting point.
@@ -178,7 +143,7 @@ KK_MaxPossibleClusters = 300
 
 # You can start with a chosen fixed number of clusters derived from the
 # mask vectors, set by KK_MaskStarts.
-KK_MaskStarts = 300
+KK_MaskStarts = 500
 
 # The number of iterations after which KlustaKwik first attempts to split
 # existing clusters. KlustaKwik then splits every SplitEvery iterations.
@@ -311,81 +276,3 @@ KK_MaskStarts = 300
 
 # Outputs number of initial clusters.
 #KK_SplitInfo = 1
-
-"""
-
-def read_s2mat(mat,site_map):
-    with h5.File(mat, 'r') as f_in:
-        n_samp = np.inf
-
-        # hack to deal with weird Spike2 export. Try to delete.
-        for ch, site in enumerate(site_map):
-            length = f_in[site]['length'][0,0]
-            if n_samp > length:
-                n_samp = length
-
-        shape = (n_samp,len(site_map)) # samples,channels
-        data = np.empty(shape,np.int16)
-
-        for ch, site in enumerate(site_map):
-            data[:,ch] = f_in[site]['values'][0,:]
-        
-    return data
-
-
-def get_args():
-
-    parser = argparse.ArgumentParser(description='Compile Spike2 epoch .mat files into KlustaKwik KWD file.')
-    parser.add_argument('mat_list', 
-                       help='a text file listing all of the mat files to compile')
-    parser.add_argument('probe', default='A1x16-5mm50',
-                       help='probe (edit this file to fix mappings)')
-
-    return parser.parse_args()
-
-def get_fs_from_mat(mat,site_map):
-    with h5.File(mat, 'r') as f:
-        for ch in site_map:
-            try:
-                fs =  1 / f[ch]['interval'][0][0]
-                return fs
-            except KeyError:
-                pass
-
-
-def main():
-    args = get_args()
-
-    # get experiment info from file structure
-    subj, _, pen, site = os.getcwd().split('/')[-4:]
-    exp = '_'.join((subj,pen,site))
-    kwd = exp + '.raw.kwd'
-
-    params = {
-        'probe': args.probe,
-        'exp': exp,
-        }
-
-    # open KWD file (destination HDF5)
-    print 'Opening %s' % kwd
-    with h5.File(kwd, 'w') as kwd_f, open(args.mat_list,'r') as mlist_f:
-        # for each mat file in the list
-        for rec, mat in enumerate(mlist_f):
-            mat = mat.strip()
-            # read in data from MAT and write to KWD
-            print 'Copying %s into Recording/%s' % (mat,rec)
-            data = read_s2mat(mat,CHANMAP[args.probe])
-            kwd_f.create_dataset('recordings/%i/data' % rec, data=data)
-
-            # grab parameters from first MAT file
-            if rec == 0:
-                params['fs'] = get_fs_from_mat(mat,CHANMAP[args.probe])
-                params['nchan'] = data.shape[1]
-
-
-    # write the parameters
-    with open('params.prm', 'w') as pf:
-        pf.write(PARAMS_TEMPLATE.format(**params))
-
-if __name__ == '__main__':
-    main()

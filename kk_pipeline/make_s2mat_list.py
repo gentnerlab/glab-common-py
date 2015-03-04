@@ -2,7 +2,7 @@
 import glob
 
 def main():
-    mat_files = glob.glob('Epc*_N?_*/Sub*.mat')
+    mat_files = glob.glob('Epc*_N?_*/*.mat')
     if len(mat_files) < 1:
         print 'No files to compile'
         return
