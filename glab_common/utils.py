@@ -339,3 +339,34 @@ def accperstimplot(subj,df,days=7,stims_all=None):
     plt.title(subj)
     plt.xlabel('day')
     plt.ylabel('stim')
+
+
+def stars(p):
+    '''Converts p-values into R-styled stars.
+
+    Signif. codes:  
+        ‘***’ :  < 0.001 
+        ‘**’ : < 0.01 \
+        ‘*’ : < 0.05 
+        ‘.’ : < 0.1 
+        ‘n.s.’ : < 1.0
+
+    '''
+    if p < 0.001:
+        return '***'
+    elif p < 0.01:
+        return '**'
+    elif p < 0.05:
+        return '*'
+    elif p < 0.1:
+        return '.'
+    else:
+        return 'n.s.'
+    
+def plot_stars(p,x,y,,size='large',horizontalalignment='center',**kwargs):
+    ''' Plots significance stars '''
+    plt.text(x,y,stars(p),size=size,horizontalalignment=horizontalalignment,**kwargs)
+
+def plot_linestar(p,x1,x2,y):
+    hlines(y, x1, x2)
+    plot_stars(0.5*(x1+x2),y+0.02,stars(p),size='large',horizontalalignment='center')
