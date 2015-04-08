@@ -32,7 +32,43 @@ CHANMAP = {
         'Port_10',
         'Port_8',
         'Port_9',
-        ]
+        ],
+        
+        
+    'N-Form': [
+        'Port_1',
+        'Port_2',
+        'Port_3',
+        'Port_4',
+        'Port_5',
+        'Port_6',
+        'Port_7',
+        'Port_8',
+        'Port_9',
+        'Port_10',
+        'Port_11',
+        'Port_12',
+        'Port_13',
+        'Port_14',
+        'Port_15',
+        'Port_16',
+        'Port_17',
+        'Port_18',
+        'Port_19',
+        'Port_20',
+        'Port_21',
+        'Port_22',
+        'Port_23',
+        'Port_24',
+        'Port_25',
+        'Port_26',
+        'Port_27',
+        'Port_28',
+        'Port_29',
+        'Port_30',
+        'Port_31',
+        'Port_32',
+        ]  
     }
 
 def read_s2mat(mat,site_map):
