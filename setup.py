@@ -8,7 +8,5 @@ setup(
     description='shared code for common lab functions, analyses, etc',
     author='Justin Kiggins',
     author_email='justin.kiggins@gmail.com',
-    packages=['glab_common',
-              ],
-    },
+    packages=['glab_common',],
 )
