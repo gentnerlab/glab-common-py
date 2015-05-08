@@ -90,9 +90,9 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
 
     Parameters:
     -----------
-    subjects :  list or tuple of str 
+    subjects :  list or tuple of str
         bird ids of any length i.e. ('B999', 'B9999')
-    data_folder : str 
+    data_folder : str
         top level folder for the data containing folders matching the elements of subjects
     force_boolean : list of str, optional
         data columns which will be cast as bool
@@ -131,13 +131,13 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
             for data_f in data_files:
                 nheaderrows = 5
                 dat = load_rDAT(data_f, nheaderrows=nheaderrows, fmt=fmt)
-                
+
                 year = _read_year_rDAT(data_f, nheaderrows)
                 df = pd.DataFrame(dat, columns=zip(*fmt)[0])
                 dt_maker = _make_dt_maker(year)
                 df['date'] = df.apply(dt_maker, axis=1)
                 df.set_index('date', inplace=True)
-                df['type_'] = df['old_type'].map(lambda(x): ['correction','normal'][x]) 
+                df['type_'] = df['old_type'].map(lambda(x): ['correction','normal'][x])
                 df['response'] = df['old_response'].map(lambda(x): ['none', 'L', 'R'][x])
                 df['correct'] = df['old_correct'].map(lambda(x): [False, True, float('nan')][x])
                 df['reward'] = df.apply(lambda(x): x['reinforcement'] == 1 and x['correct'] == True, axis=1)
@@ -161,7 +161,7 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                                  )
                 df.rename(columns=col_map, inplace=True)
                 df.set_index('date',inplace=True)
-                df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x]) 
+                df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x])
                 df['correct'] = df['ResponseAccuracy'].map(lambda(x): [False, True, float('nan')][x])
                 df['reward'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == True, axis=1)
                 df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
@@ -225,11 +225,11 @@ def binomial_ci(x,N,CL=95.0):
         the lower and upper bounds on the confidence interval
 
     Usage:
-    >>> calcBin(13,100)    
+    >>> calcBin(13,100)
     (0.07107391357421874, 0.21204372406005856)
-    >>> calcBin(4,7)   
+    >>> calcBin(4,7)
     (0.18405151367187494, 0.9010086059570312)
-    ''' 
+    '''
     x = float(x)
     N = float(N)
     #Set the confidence bounds
@@ -273,11 +273,11 @@ def binomial_ci(x,N,CL=95.0):
 
 def vinjegallant(response):
     '''
-    calculates the activity fraction of a set of responses 
+    calculates the activity fraction of a set of responses
 
     Parameters:
     -----------
-    response : list or tuple or NumPy array 
+    response : list or tuple or NumPy array
         the set of responses to calculate the activity fraction over
 
     Returns:
@@ -290,7 +290,7 @@ def vinjegallant(response):
 
     A = ((R.sum()/n)**2) / (((R**2).sum()/n) + eps)
     S = (1 - A) / (1 - 1/n)
-    
+
     return S
 
 
@@ -320,13 +320,13 @@ def accperstimplot(subj,df,days=7,stims_all=None):
     aggregated = blocked.agg({'correct': lambda x: np.mean(x.astype(float))})
     days_passed = np.arange(days)
     stim_number = np.arange(len(stims_all))
-    
+
     plt.figure()
     plt.subplot(1,2,2)
     cmap = plt.get_cmap('Oranges')
     cmap.set_bad(color = 'k', alpha = 0.5)
     correct = np.zeros((len(days_passed),len(stim_number)),np.float_)
-    
+
     for day in days_passed:
         for st in stim_number:
             try:
@@ -344,12 +344,12 @@ def accperstimplot(subj,df,days=7,stims_all=None):
 def stars(p):
     '''Converts p-values into R-styled stars.
 
-    Signif. codes:  
-        ‘***’ :  < 0.001 
-        ‘**’ : < 0.01 \
-        ‘*’ : < 0.05 
-        ‘.’ : < 0.1 
-        ‘n.s.’ : < 1.0
+    Signif. codes:
+        '***' :  < 0.001
+        '**' : < 0.01
+        '*' : < 0.05
+        '.' : < 0.1
+        'n.s.' : < 1.0
 
     '''
     if p < 0.001:
@@ -362,8 +362,8 @@ def stars(p):
         return '.'
     else:
         return 'n.s.'
-    
-def plot_stars(p,x,y,,size='large',horizontalalignment='center',**kwargs):
+
+def plot_stars(p,x,y,size='large',horizontalalignment='center',**kwargs):
     ''' Plots significance stars '''
     plt.text(x,y,stars(p),size=size,horizontalalignment=horizontalalignment,**kwargs)
 
