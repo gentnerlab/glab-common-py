@@ -4,6 +4,7 @@ import glob
 import pandas as pd
 import datetime as dt
 import os
+import matplotlib.pyplot as plt
 
 def load_mat(filename):
     '''
@@ -11,6 +12,15 @@ def load_mat(filename):
     as it cures the problem of not properly recovering python dictionaries
     from mat files. It calls the function check keys to cure all entries
     which are still mat-objects
+
+    Parameters:
+    -----------
+    filename : str
+        matlab data file ('.mat')
+
+    Returns:
+    --------
+    dict
     '''
     data = sio.loadmat(filename, struct_as_record=False, squeeze_me=True)
     return _check_keys(data)
@@ -76,10 +86,21 @@ def _read_year_rDAT(rDat_f, nheaderrows):
 def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
     '''
     a function that loads data files for a number of subjects into panda DataFrames.
-    supports pyoperant files as well as some c operant data files
-        subjects is a tuple of bird ids of any length i.e. ('B999', 'B9999')
-        data_folder is the top level folder for the data containing folders matching the elements of subjects
-        force_boolean is a list of data entries which will be cast as bool. Can be empty.
+    supports pyoperant files, rDAT files (from c operant behavior scripts), and AllTrials files
+
+    Parameters:
+    -----------
+    subjects :  list or tuple of str 
+        bird ids of any length i.e. ('B999', 'B9999')
+    data_folder : str 
+        top level folder for the data containing folders matching the elements of subjects
+    force_boolean : list of str, optional
+        data columns which will be cast as bool
+
+    Returns:
+    --------
+    dict
+        each key in the dict is a subject string. each value is a pandas dataframe
     '''
     behav_data = {}
     for subj in subjects:
@@ -122,17 +143,47 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 df['reward'] = df.apply(lambda(x): x['reinforcement'] == 1 and x['correct'] == True, axis=1)
                 df['class_'] = df['old_class'].map(lambda(x): ['none', 'L', 'R'][x])
                 df_set.append(df)
+        data_files = glob.glob(os.path.join(data_folder,subj,subj+'.AllTrials'))
+        if data_files: # if AllTrials file from probe-the-broab
+            col_map = {'StimName': 'stimulus',
+                       'Epoch': 'session',
+                       'StimulusFile': 'block_name',
+                       }
+            def _parse(datestr, timestr):
+                return dt.datetime.strptime(datestr+timestr,"%Y:%m:%d%H:%M:%S")
+
+            for data_f in data_files:
+                nheaderrows = 1
+                # try:
+                df = pd.read_csv(data_f,
+                                 parse_dates={'date':['Date','Time']},
+                                 date_parser=_parse,
+                                 )
+                df.rename(columns=col_map, inplace=True)
+                df.set_index('date',inplace=True)
+                df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x]) 
+                df['correct'] = df['ResponseAccuracy'].map(lambda(x): [False, True, float('nan')][x])
+                df['reward'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == True, axis=1)
+                df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
+                df['class_'] = df['StimClass'].map(lambda(x): ['none', 'L', 'R'][x])
+                df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
+
+                df_set.append(df)
+                (force_boolean.append(x) for x in ['NeuralRecording','BehavioralRecording'])
+
+                # except ValueError:
+                #     df = None
         if df_set:
             behav_data[subj] = pd.concat(df_set)
         else:
             print 'data not found for %s' % (subj)
     if force_boolean:
         for subj in subjects:
-            for forced in force_boolean:
-                behav_data[subj][forced] = behav_data[subj][forced].map(lambda(x): x in [True, 'True', 'true', 1, '1'])
+            if subj in behav_data:
+                for forced in force_boolean:
+                    behav_data[subj][forced] = behav_data[subj][forced].map(lambda(x): x in [True, 'True', 'true', 1, '1'])
     return behav_data
 
-## http://stackoverflow.com/questions/13059011/is-there-any-python-function-library-for-calculate-binomial-confidence-intervals
 def binP(N, p, x1, x2):
     p = float(p)
     q = p/(1-p)
@@ -153,9 +204,25 @@ def binP(N, p, x1, x2):
             v = v*q*(N+1-k)/k
     return s/tot
 
-def binomial_ci(vx, vN, vCL = 95):
+def binomial_ci(x,N,CL=95.0):
     '''
     Calculate the exact confidence interval for a binomial proportion
+
+    from http://stackoverflow.com/questions/13059011/is-there-any-python-function-library-for-calculate-binomial-confidence-intervals
+
+    Parameters:
+    -----------
+    x : int
+        count of items
+    N : int
+        total number of items
+    CL : float
+        confidence limit
+
+    Returns:
+    --------
+    tuple of floats
+        the lower and upper bounds on the confidence interval
 
     Usage:
     >>> calcBin(13,100)    
@@ -163,49 +230,60 @@ def binomial_ci(vx, vN, vCL = 95):
     >>> calcBin(4,7)   
     (0.18405151367187494, 0.9010086059570312)
     ''' 
-    vx = float(vx)
-    vN = float(vN)
+    x = float(x)
+    N = float(N)
     #Set the confidence bounds
-    vTU = (100 - float(vCL))/2
-    vTL = vTU
+    TU = (100 - float(CL))/2
+    TL = TU
 
-    vP = vx/vN
-    if (vx==0):
+    P = x/N
+    if (x==0):
         dl = 0.0
     else:
-        v = vP/2
-        vsL = 0
-        vsH = vP
-        p = vTL/100
+        v = P/2
+        sL = 0
+        sH = P
+        p = TL/100
 
-        while((vsH-vsL) > 10**-5):
-            if(binP(vN, v, vx, vN) > p):
-                vsH = v
-                v = (vsL+v)/2
+        while((sH-sL) > 10**-5):
+            if(binP(N, v, x, N) > p):
+                sH = v
+                v = (sL+v)/2
             else:
-                vsL = v
-                v = (v+vsH)/2
+                sL = v
+                v = (v+sH)/2
         dl = v
 
-    if (vx==vN):
+    if (x==N):
         ul = 1.0
     else:
-        v = (1+vP)/2
-        vsL =vP
-        vsH = 1
-        p = vTU/100
-        while((vsH-vsL) > 10**-5):
-            if(binP(vN, v, 0, vx) < p):
-                vsH = v
-                v = (vsL+v)/2
+        v = (1+P)/2
+        sL = P
+        sH = 1
+        p = TU/100
+        while((sH-sL) > 10**-5):
+            if(binP(N, v, 0, x) < p):
+                sH = v
+                v = (sL+v)/2
             else:
-                vsL = v
-                v = (v+vsH)/2
+                sL = v
+                v = (v+sH)/2
         ul = v
     return (dl, ul)
 
 def vinjegallant(response):
+    '''
+    calculates the activity fraction of a set of responses 
 
+    Parameters:
+    -----------
+    response : list or tuple or NumPy array 
+        the set of responses to calculate the activity fraction over
+
+    Returns:
+    --------
+    float
+    '''
     R = np.asarray(response[:])
     n = np.float_(len(R))
     eps = spacing(np.float64(1))
@@ -214,3 +292,81 @@ def vinjegallant(response):
     S = (1 - A) / (1 - 1/n)
     
     return S
+
+
+
+def accperstimplot(subj,df,days=7,stims_all=None):
+    '''
+    perc corr broken out by stimulus and day. input how many days you want to look at into "days" argument
+    stims_all is a list of all stimuli in the order you want them displayed
+
+    Parameters:
+    -----------
+    subj : str
+        the subject
+    df : pandas DataFrame
+        the data to analyze
+    days : int, optional
+        how many of the previous days to observe. (default=7)
+    stims_all : list of str
+        list of all stimuli in the order you want them displayed
+    '''
+    data_to_analyze = df[(df.response!='none')&(df.type_=='normal')&(df.index>(dt.datetime.today()-dt.timedelta(days=days)))]
+    #get any stims that have been shown to bird
+    if not stims_all:
+        stims_all = sorted(list(set(data_to_analyze.stimulus)))
+    #stims = list(set(data_day.stimulus))
+    blocked = data_to_analyze.groupby([lambda x: (dt.datetime.now().date()-x.date()).days, data_to_analyze.stimulus])
+    aggregated = blocked.agg({'correct': lambda x: np.mean(x.astype(float))})
+    days_passed = np.arange(days)
+    stim_number = np.arange(len(stims_all))
+    
+    plt.figure()
+    plt.subplot(1,2,2)
+    cmap = plt.get_cmap('Oranges')
+    cmap.set_bad(color = 'k', alpha = 0.5)
+    correct = np.zeros((len(days_passed),len(stim_number)),np.float_)
+    
+    for day in days_passed:
+        for st in stim_number:
+            try:
+                correct[day,st] = aggregated['correct'][day,str(stims_all[st])]
+            except KeyError:
+                correct[day,st] = np.nan
+    correct = np.ma.masked_invalid(correct)
+    plt.pcolormesh(np.rot90(np.fliplr(correct),k=3),cmap=cmap,vmin=0, vmax=1)
+    plt.colorbar()
+    plt.title(subj)
+    plt.xlabel('day')
+    plt.ylabel('stim')
+
+
+def stars(p):
+    '''Converts p-values into R-styled stars.
+
+    Signif. codes:  
+        ‘***’ :  < 0.001 
+        ‘**’ : < 0.01 \
+        ‘*’ : < 0.05 
+        ‘.’ : < 0.1 
+        ‘n.s.’ : < 1.0
+
+    '''
+    if p < 0.001:
+        return '***'
+    elif p < 0.01:
+        return '**'
+    elif p < 0.05:
+        return '*'
+    elif p < 0.1:
+        return '.'
+    else:
+        return 'n.s.'
+    
+def plot_stars(p,x,y,,size='large',horizontalalignment='center',**kwargs):
+    ''' Plots significance stars '''
+    plt.text(x,y,stars(p),size=size,horizontalalignment=horizontalalignment,**kwargs)
+
+def plot_linestar(p,x1,x2,y):
+    hlines(y, x1, x2)
+    plot_stars(0.5*(x1+x2),y+0.02,stars(p),size='large',horizontalalignment='center')

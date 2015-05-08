@@ -1,4 +1,4 @@
-gentnerlab-shared-py
+Gentner Lab Common
 ====================
 
 shared code for common lab functions, analyses, etc
