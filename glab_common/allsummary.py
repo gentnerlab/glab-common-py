@@ -8,7 +8,7 @@ import warnings
 if 'zog' in gethostname():
     process_fname = "/home/bird/bin/perltools/zbox_bird_process"
 elif 'vogel' in gethostname():
-    process_fname = "/home/bird/bin/perltools/vbox_bird_process"
+    process_fname = "/home/bird/opdat/panel_subject_behavior"
 else:
     raise Exception('process_fname not defined for host: %s' % (gethostname))
 
