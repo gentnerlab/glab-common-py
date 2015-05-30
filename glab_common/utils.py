@@ -105,17 +105,22 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
     behav_data = {}
     for subj in subjects:
         df_set = []
+
+        # if vogel/pyoperant
         data_files = glob.glob(os.path.join(data_folder,subj,subj+'_trialdata_*.csv'))
-        if data_files: # if vogel/pyoperant
+        if data_files:
             for data_f in data_files:
                 with open(data_f,'rb') as f:
                     try:
                         df = pd.read_csv(f,index_col=['time'],parse_dates=['time'])
+                        df['data_file'] = data_f
                         df_set.append(df)
                     except ValueError:
                         df = None
+
+        # if ndege/c operant
         data_files = glob.glob(os.path.join(data_folder,subj,subj[1:]+'_match2sample*.2ac_rDAT'))
-        if data_files:  # if ndege/c operant
+        if data_files:  
             fmt = [('session','i4'),
                    ('trial_number','i4'),
                    ('old_type','b'),
@@ -142,9 +147,44 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 df['correct'] = df['old_correct'].map(lambda(x): [False, True, float('nan')][x])
                 df['reward'] = df.apply(lambda(x): x['reinforcement'] == 1 and x['correct'] == True, axis=1)
                 df['class_'] = df['old_class'].map(lambda(x): ['none', 'L', 'R'][x])
+                df['data_file'] = data_f
                 df_set.append(df)
+
+        # if ndege/c GONOGO operant
+        data_files = glob.glob(os.path.join(data_folder,subj,subj[1:]+'*.gonogo_rDAT'))
+        if data_files:  
+            fmt = [('session','i4'),
+                   ('trial_number','i4'),
+                   ('old_type','b'),
+                   ('stimulus','a64'),
+                   ('old_class','i4'),
+                   ('old_response','i4'),
+                   ('old_correct','i4'),
+                   ('rt','f4'),
+                   ('reinforcement','b'),
+                   ('TimeOfDay','a8'),
+                   ('old_date','a8'),
+                   ];
+            for data_f in data_files:
+                nheaderrows = 5
+                dat = load_rDAT(data_f, nheaderrows=nheaderrows, fmt=fmt)
+
+                year = _read_year_rDAT(data_f, nheaderrows)
+                df = pd.DataFrame(dat, columns=zip(*fmt)[0])
+                dt_maker = _make_dt_maker(year)
+                df['date'] = df.apply(dt_maker, axis=1)
+                df.set_index('date', inplace=True)
+                df['type_'] = df['old_type'].map(lambda(x): ['correction','normal'][x])
+                df['response'] = df['old_response'].map(lambda(x): ['none', 'C'][x])
+                df['correct'] = df['old_correct'].map(lambda(x): [False, True, float('nan')][x])
+                df['reward'] = df.apply(lambda(x): x['reinforcement'] == 1 and x['correct'] == True, axis=1)
+                df['class_'] = df['old_class'].map(lambda(x): ['none', 'GO', 'NOGO'][x])
+                df['data_file'] = data_f
+                df_set.append(df)
+                        
+        # if AllTrials file from probe-the-broab
         data_files = glob.glob(os.path.join(data_folder,subj,subj+'.AllTrials'))
-        if data_files: # if AllTrials file from probe-the-broab
+        if data_files: 
             col_map = {'StimName': 'stimulus',
                        'Epoch': 'session',
                        'StimulusFile': 'block_name',
@@ -167,6 +207,7 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
                 df['class_'] = df['StimClass'].map(lambda(x): ['none', 'L', 'R'][x])
                 df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
+                df['data_file'] = data_f
 
                 df_set.append(df)
                 (force_boolean.append(x) for x in ['NeuralRecording','BehavioralRecording'])
