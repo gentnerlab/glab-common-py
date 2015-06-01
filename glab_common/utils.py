@@ -216,6 +216,7 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 #     df = None
         if df_set:
             behav_data[subj] = pd.concat(df_set)
+            behav_data[subj].sort_index(inplace=True)
         else:
             print 'data not found for %s' % (subj)
     if force_boolean:
