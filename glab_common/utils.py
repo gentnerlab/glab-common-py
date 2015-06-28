@@ -209,6 +209,9 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
                 df['data_file'] = data_f
 
+                is_behave = df['BehavioralRecording'] > 0
+                df = df[is_behave]
+
                 df_set.append(df)
                 (force_boolean.append(x) for x in ['NeuralRecording','BehavioralRecording'])
 
