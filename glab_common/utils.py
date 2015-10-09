@@ -201,11 +201,11 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                                  )
                 df.rename(columns=col_map, inplace=True)
                 df.set_index('date',inplace=True)
-                df['type_'] = df['Correction'].map(lambda(x): ['normal','correction'][x])
+                df['type_'] = df['Correction'].map(lambda(x): {0:'normal',1:'correction',243:'error',-1:None}[x])
                 df['correct'] = df['ResponseAccuracy'].map(lambda(x): [False, True, float('nan')][x])
                 df['reward'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == True, axis=1)
                 df['punish'] = df.apply(lambda(x): x['Reinforced'] == 1 and x['correct'] == False, axis=1)
-                df['class_'] = df['StimClass'].map(lambda(x): ['none', 'L', 'R'][x])
+                df['class_'] = df['StimClass'].map(lambda(x): {0:'none',1:'L',2:'R',243:'error',-1:None}[x])
                 df['response'] = df['ResponseSelection'].map(lambda(x): ['none', 'L', 'R'][x])
                 df['data_file'] = data_f
 
