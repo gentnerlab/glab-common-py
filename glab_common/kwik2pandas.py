@@ -76,4 +76,18 @@ def load_kwik(filename):
 def good_spikes(spikes):
     return spikes[spikes['cluster_group'] == 2]
 
+def not_bad_spikes(spikes):
+    return spikes[spikes['cluster_group'] != 0]
 
+def compute_refractory_violations(spikes, refrac_T=1.0, sample_rate):
+    #Look for refractory period violations
+    refrac_samps = (refrac_T / 1000.0) * sample_rate
+    refractory_violations = pd.DataFrame({'cluster' : spikes['cluster'].unique()})
+    for cluster in spikes_wo_bad['cluster'].unique():
+        spike_times_this_cluster = 1.0*spikes.loc[spikes_wo_bad['cluster'] == cluster, 'time_stamp'].values.astype('int')
+        spikes_dt = spike_times_this_cluster[1:] - spike_times_this_cluster[0:-1]
+        n_violations = np.size(np.nonzero(1.0*(spikes_dt < refrac_samps)))
+        violation_prop = 100.0*n_violations / np.size(spike_times_this_cluster)
+        refractory_violations.loc[refractory_violations['cluster'] == cluster, 'violations'] = n_violations
+        refractory_violations.loc[refractory_violations['cluster'] == cluster, 'percentage'] = violation_prop
+    return refractory_violations
