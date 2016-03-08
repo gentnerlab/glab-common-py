@@ -330,7 +330,7 @@ def vinjegallant(response):
     '''
     R = np.asarray(response[:])
     n = np.float_(len(R))
-    eps = spacing(np.float64(1))
+    eps = np.spacing(np.float64(1))
 
     A = ((R.sum()/n)**2) / (((R**2).sum()/n) + eps)
     S = (1 - A) / (1 - 1/n)
