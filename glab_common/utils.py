@@ -113,6 +113,7 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 with open(data_f,'rb') as f:
                     try:
                         df = pd.read_csv(f,index_col=['time'],parse_dates=['time'])
+                        df = df[~pd.isnull(df.index)]
                         df['data_file'] = data_f
                         df_set.append(df)
                     except ValueError:
@@ -218,7 +219,6 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
                 # except ValueError:
                 #     df = None
         if df_set:
-            df_set = df_set[~pd.isnull(df_set.index)]
             behav_data[subj] = pd.concat(df_set).sort()
         else:
             print 'data not found for %s' % (subj)
