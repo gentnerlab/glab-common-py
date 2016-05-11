@@ -84,6 +84,7 @@ for (box, bird, proc) in zip(box_nums, bird_nums, processes):
 
             subj = 'B%d' % (bird)
             df = behav_data[subj]
+            df = df[~pd.isnull(data.index)]
             todays_data = df[(df.index.date-dt.datetime.today().date()) == dt.timedelta(days=0)]
             feeder_ops = sum(todays_data['reward'].values)
             trials_run = len(todays_data)
