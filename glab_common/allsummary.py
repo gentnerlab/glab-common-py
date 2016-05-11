@@ -2,15 +2,10 @@
 import re
 import datetime as dt
 from glab_common.utils import load_data_pandas
-from socket import gethostname
 import warnings
+from pyoperant.local import DATA_PATH
 
-if 'zog' in gethostname():
-    process_fname = "/home/bird/bin/perltools/zbox_bird_process"
-elif 'vogel' in gethostname():
-    process_fname = "/home/bird/opdat/panel_subject_behavior"
-else:
-    raise Exception('process_fname not defined for host: %s' % (gethostname))
+process_fname = DATA_PATH + "panel_subject_behavior"
 
 inf = open(process_fname, 'rt')
 
