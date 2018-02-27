@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 import re
 import datetime as dt
-from glab_common.utils import load_data_pandas
+from behav.loading import load_data_pandas
 from socket import gethostname
 import warnings
 try:
@@ -30,10 +30,6 @@ with open(process_fname, 'rt') as in_f:
 
 subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
-# load all data
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    behav_data = load_data_pandas(subjects, data_folder);
 
 with open(DATA_PATH+'all.compassion', 'w') as f:
 
@@ -61,6 +57,9 @@ with open(DATA_PATH+'all.compassion', 'w') as f:
                     f.write("Bird B%d\tBox %d\tOwner %s: Is on shape, hopefully %s is really watching them\n" % (bird, box, bird_owner, bird_owner))
                 else:
                     subj = 'B%d' % (bird)
+                    with warnings.catch_warnings():
+                        warnings.simplefilter("ignore")
+                        behav_data = load_data_pandas([subj], data_folder);
                     df = behav_data[subj]
                     todays_data = df[(df.index.date-dt.datetime.today().date()) == dt.timedelta(days=0)]
                     feeder_ops = sum(todays_data['reward'].values)
