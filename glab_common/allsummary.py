@@ -26,10 +26,10 @@ for line in inf.readlines():
 inf.close()
 subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
-# load all data
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    behav_data = load_data_pandas(subjects, data_folder);
+# load all data <- this was probably causing crashes
+#with warnings.catch_warnings():
+#    warnings.simplefilter("ignore")
+#    behav_data = load_data_pandas(subjects, data_folder);
 
 f = open('/home/bird/all.summary', 'w')
 
@@ -83,8 +83,10 @@ for (box, bird, proc) in zip(box_nums, bird_nums, processes):
 
 
             subj = 'B%d' % (bird)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                behav_data = load_data_pandas([subj], data_folder);
             df = behav_data[subj]
-            df = df[~pd.isnull(data.index)]
             todays_data = df[(df.index.date-dt.datetime.today().date()) == dt.timedelta(days=0)]
             feeder_ops = sum(todays_data['reward'].values)
             trials_run = len(todays_data)
