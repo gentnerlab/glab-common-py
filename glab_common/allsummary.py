@@ -1,3 +1,4 @@
+from __future__ import print_function
 import re
 import datetime as dt
 from behav.loading import load_data_pandas
@@ -83,4 +84,4 @@ with open('/home/bird/all.summary', 'w') as as_file:
         except Exception as e:
             as_file.write(
                 "box %d\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird))
-            print e
+            print(e)
