@@ -1,11 +1,12 @@
-#!/usr/local/bin/python
+from __future__ import print_function
 import re
 import datetime as dt
 from behav.loading import load_data_pandas
 import warnings
-from pyoperant.local import DATA_PATH
+import subprocess
+import os
 
-process_fname = DATA_PATH + "panel_subject_behavior"
+process_fname = "/home/bird/opdat/panel_subject_behavior"
 
 box_nums = []
 bird_nums = []
@@ -22,6 +23,15 @@ with open(process_fname, 'rt') as psb_file:
                 bird_nums.append(int(spl_line[2]))
                 processes.append(spl_line[4])
 
+
+# rsync magpis
+hostname = os.uname()[1]
+if 'magpi' in hostname:
+    for box_num in box_nums:
+        box_hostname = 'magpi{:02d}'.format(box_num)
+        rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
+        rsync_dst = "/home/bird/opdat/"
+        rsync_output = subprocess.run(["rsync", "-avz", rsync_src, rsync_dst])
 
 subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
@@ -74,4 +84,4 @@ with open('/home/bird/all.summary', 'w') as as_file:
         except Exception as e:
             as_file.write(
                 "box %d\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird))
-            print e
+            print(e)
