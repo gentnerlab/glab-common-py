@@ -5,7 +5,7 @@ from behav.loading import load_data_pandas
 import warnings
 import subprocess
 
-process_fname = "/home/bird/panel_subject_behavior"
+process_fname = "/home/bird/opdat/panel_subject_behavior"
 
 box_nums = []
 bird_nums = []
