@@ -1,4 +1,4 @@
-#!/usr/local/bin/python
+#!/usr/bin/python3
 import re
 import datetime as dt
 from behav.loading import load_data_pandas
