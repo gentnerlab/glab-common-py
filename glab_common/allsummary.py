@@ -1,7 +1,7 @@
 #!/usr/local/bin/python
 import re
 import datetime as dt
-from glab_common.utils import load_data_pandas
+from behav.loading import load_data_pandas
 import warnings
 from pyoperant.local import DATA_PATH
 
@@ -26,10 +26,6 @@ for line in inf.readlines():
 inf.close()
 subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
-# load all data
-with warnings.catch_warnings():
-    warnings.simplefilter("ignore")
-    behav_data = load_data_pandas(subjects, data_folder);
 
 f = open('/home/bird/all.summary', 'w')
 
@@ -83,14 +79,17 @@ for (box, bird, proc) in zip(box_nums, bird_nums, processes):
 
 
             subj = 'B%d' % (bird)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                behav_data = load_data_pandas([subj], data_folder);
             df = behav_data[subj]
-            df = df[~pd.isnull(data.index)]
+            #df = df[~pd.isnull(data.index)]
             todays_data = df[(df.index.date-dt.datetime.today().date()) == dt.timedelta(days=0)]
             feeder_ops = sum(todays_data['reward'].values)
             trials_run = len(todays_data)
             noRs = sum(todays_data['response'].values=='none')
             TOs = trials_run-feeder_ops-noRs
-            last_trial_time = todays_data.sort().tail().index[-1]
+            last_trial_time = todays_data.sort_index().tail().index[-1]
             if last_trial_time.day != dt.datetime.now().day:
                 datediff = '(not today)'
             else:
@@ -102,6 +101,6 @@ for (box, bird, proc) in zip(box_nums, bird_nums, processes):
             f.write(outline)
     except Exception as e:
         f.write("box %d\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird))
-        #print e
+        print e
 
 f.close()
