@@ -3,9 +3,9 @@ import re
 import datetime as dt
 from behav.loading import load_data_pandas
 import warnings
-from pyoperant.local import DATA_PATH
+import subprocess
 
-process_fname = DATA_PATH + "panel_subject_behavior"
+process_fname = "/home/bird/panel_subject_behavior"
 
 box_nums = []
 bird_nums = []
