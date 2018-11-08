@@ -81,14 +81,14 @@ def load_data_pandas(subjects, data_folder, force_boolean=['reward']):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
 
 
 def binomial_ci(x, N, CL=95.0):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
 
 
 def vinjegallant(response):
@@ -118,25 +118,25 @@ def accperstimplot(subj, df, days=7, stims_all=None):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
 
 
 def stars(p):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
 
 
 def plot_stars(p, x, y, size='large', horizontalalignment='center', **kwargs):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
 
 
 def plot_linestar(p, x1, x2, y):
     '''
     This function is deprecated and has been moved to Gentnerlab/behav-analysis
     '''
-    raise DeprecationWarning('test')
+    raise DeprecationWarning('Moved to Gentnerlab/behav-analysis')
