@@ -19,7 +19,7 @@ with open(process_fname, "rt") as psb_file:
         else:
             spl_line = line.split()
             if spl_line[1] == "1":  # box enabled
-                box_nums.append(int(spl_line[0]))
+                box_nums.append(spl_line[0])
                 bird_nums.append(int(spl_line[2]))
                 processes.append(spl_line[4])
 
