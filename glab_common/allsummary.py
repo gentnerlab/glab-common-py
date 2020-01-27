@@ -37,7 +37,7 @@ subjects = ['B%d' % (bird_num) for bird_num in bird_nums]
 data_folder = '/home/bird/opdat'
 
 with open('/home/bird/all.summary', 'w') as as_file:
-    as_file.write("this all.summary generated at %s\n" % (dt.datetime.now().strftime('%x %X')))
+    as_file.write("This all.summary generated at %s\n" % (dt.datetime.now().strftime('%x %X')))
     as_file.write("FeedErr(won't come up, won't go down, already up, resp during feed)\n")
 
     # Now loop through each bird and grab the error info from each summaryDAT file
