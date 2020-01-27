@@ -28,7 +28,7 @@ with open(process_fname, "rt") as psb_file:
 hostname = os.uname()[1]
 if "magpi" in hostname:
     for box_num in box_nums:
-        box_hostname = "magpi{:02d}".format(box_num)
+        box_hostname = box_num
         rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
         rsync_dst = "/home/bird/opdat/"
         rsync_output = subprocess.run(["rsync", "-avz", rsync_src, rsync_dst])
