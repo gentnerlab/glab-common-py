@@ -47,8 +47,10 @@ with open("/home/bird/all.summary", "w") as as_file:
     # Now loop through each bird and grab the error info from each summaryDAT file
     for (box, bird, proc) in zip(box_nums, bird_nums, processes):
         try:
+            # make sure box is a string
+            box = str(box)
             if proc in ("shape", "lights", "pylights", "lights.py"):
-                as_file.write("box %d\tB%d\t %s\n" % (box, bird, proc))
+                as_file.write("%s\tB%d\t %s\n" % (box, bird, proc))
             else:
                 summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
                 with open(summaryfname, "rt") as sdat:
@@ -84,7 +86,7 @@ with open("/home/bird/all.summary", "w") as as_file:
                     datediff = "(%d mins ago)" % (minutes_ago)
 
                 outline = (
-                    "box %d\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  \tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
+                    "%s\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  \tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
                     % (
                         box,
                         bird,
@@ -104,7 +106,6 @@ with open("/home/bird/all.summary", "w") as as_file:
                 as_file.write(outline)
         except Exception as e:
             as_file.write(
-                "box %d\tB%d\t Error opening SummaryDat or incorrect format\n"
-                % (box, bird)
+                "%s\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird)
             )
             print(e)
