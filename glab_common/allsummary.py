@@ -5,6 +5,7 @@ from behav.loading import load_data_pandas
 import warnings
 import subprocess
 import os
+import sys
 
 process_fname = "/home/bird/opdat/panel_subject_behavior"
 
@@ -31,6 +32,8 @@ if "magpi" in hostname:
         box_hostname = box_num
         rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
         rsync_dst = "/home/bird/opdat/"
+        print("Rsync src: {}".format(rsync_src), file=sys.stderr)
+        print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
         rsync_output = subprocess.run(["rsync", "-avhW", rsync_src, rsync_dst])
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
