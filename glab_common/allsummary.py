@@ -32,9 +32,13 @@ if "magpi" in hostname:
         box_hostname = box_num
         rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
         rsync_dst = "/home/bird/opdat/"
+<<<<<<< HEAD
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
         rsync_output = subprocess.run(["rsync", "-avhW", rsync_src, rsync_dst])
+=======
+        rsync_output = subprocess.run(["rsync", "-avz", "--exclude Generated_Songs/", rsync_src, rsync_dst])
+>>>>>>> 087312ebcdb309b7a1542680a31f836bd842fc1e
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
 data_folder = "/home/bird/opdat"
