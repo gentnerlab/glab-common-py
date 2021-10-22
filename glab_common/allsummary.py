@@ -5,6 +5,7 @@ from behav.loading import load_data_pandas
 import warnings
 import subprocess
 import os
+import sys
 
 process_fname = "/home/bird/opdat/panel_subject_behavior"
 
@@ -19,7 +20,7 @@ with open(process_fname, "rt") as psb_file:
         else:
             spl_line = line.split()
             if spl_line[1] == "1":  # box enabled
-                box_nums.append(int(spl_line[0]))
+                box_nums.append(spl_line[0])
                 bird_nums.append(int(spl_line[2]))
                 processes.append(spl_line[4])
 
@@ -28,9 +29,11 @@ with open(process_fname, "rt") as psb_file:
 hostname = os.uname()[1]
 if "magpi" in hostname:
     for box_num in box_nums:
-        box_hostname = "magpi{:02d}".format(box_num)
+        box_hostname = box_num
         rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
         rsync_dst = "/home/bird/opdat/"
+        print("Rsync src: {}".format(rsync_src), file=sys.stderr)
+        print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
         rsync_output = subprocess.run(["rsync", "-avz", "--exclude Generated_Songs/", rsync_src, rsync_dst])
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
@@ -47,8 +50,10 @@ with open("/home/bird/all.summary", "w") as as_file:
     # Now loop through each bird and grab the error info from each summaryDAT file
     for (box, bird, proc) in zip(box_nums, bird_nums, processes):
         try:
+            # make sure box is a string
+            box = str(box)
             if proc in ("shape", "lights", "pylights", "lights.py"):
-                as_file.write("box %d\tB%d\t %s\n" % (box, bird, proc))
+                as_file.write("%s\tB%d\t %s\n" % (box, bird, proc))
             else:
                 summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
                 with open(summaryfname, "rt") as sdat:
@@ -84,7 +89,7 @@ with open("/home/bird/all.summary", "w") as as_file:
                     datediff = "(%d mins ago)" % (minutes_ago)
 
                 outline = (
-                    "box %d\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  \tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
+                    "%s\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  \tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
                     % (
                         box,
                         bird,
@@ -104,7 +109,6 @@ with open("/home/bird/all.summary", "w") as as_file:
                 as_file.write(outline)
         except Exception as e:
             as_file.write(
-                "box %d\tB%d\t Error opening SummaryDat or incorrect format\n"
-                % (box, bird)
+                "%s\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird)
             )
             print(e)
