@@ -6,6 +6,7 @@ import warnings
 import subprocess
 import os
 import sys
+import json
 
 process_fname = "/home/bird/opdat/panel_subject_behavior"
 
@@ -25,16 +26,62 @@ with open(process_fname, "rt") as psb_file:
                 processes.append(spl_line[4])
 
 
+OPDAT_ROOT = "/home/bird/opdat/"
+
+
+def get_remote_stim_exclude(box_hostname, bird_num, timeout=8):
+    """SSH in and read this subject's config.json to find its real stim_path
+    (explicit, or pyoperant's own default of <experiment_path>/stims -- see
+    pyoperant.behavior.base.BaseExp.__init__), and turn it into an rsync
+    --exclude pattern anchored to opdat/'s root so it only matches this
+    subject's own stim dir, not anything else in the tree.
+
+    Returns None if the config can't be read (box unreachable, no config.json
+    -- e.g. a lights/shape box) or the subject's stim_path isn't under
+    opdat/ at all, so callers can fall back to a generic exclude instead.
+    """
+    remote_config = "{}B{}/config.json".format(OPDAT_ROOT, bird_num)
+    try:
+        result = subprocess.run(
+            ["ssh", "-o", "ConnectTimeout={}".format(timeout),
+             "bird@{}".format(box_hostname), "cat", remote_config],
+            capture_output=True, text=True, timeout=timeout + 5,
+        )
+        if result.returncode != 0 or not result.stdout.strip():
+            return None
+        config = json.loads(result.stdout)
+    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
+        return None
+
+    experiment_path = config.get("experiment_path") or "{}B{}".format(OPDAT_ROOT, bird_num)
+    stim_path = config.get("stim_path") or os.path.join(experiment_path, "stims")
+
+    if stim_path.startswith(OPDAT_ROOT):
+        return "/" + stim_path[len(OPDAT_ROOT):]
+    return None  # stim_path lives outside opdat/, nothing to exclude here
+
+
 # rsync magpis
 hostname = os.uname()[1]
 if "magpi" in hostname:
-    for box_num in box_nums:
-        box_hostname = box_num
-        rsync_src = "bird@{}:/home/bird/opdat/".format(box_hostname)
-        rsync_dst = "/home/bird/opdat/"
+    for box_hostname, bird_num in zip(box_nums, bird_nums):
+        rsync_src = "bird@{}:{}".format(box_hostname, OPDAT_ROOT)
+        rsync_dst = OPDAT_ROOT
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
-        rsync_output = subprocess.run(["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=*stim*", rsync_src, rsync_dst])
+
+        stim_exclude = get_remote_stim_exclude(box_hostname, bird_num)
+        rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs"]
+        if stim_exclude:
+            rsync_cmd.append("--exclude={}".format(stim_exclude))
+        else:
+            # Config unreadable (unreachable box, no config.json, etc.) --
+            # fall back to the name-based heuristic rather than pulling
+            # stimulus libraries unfiltered.
+            rsync_cmd.append("--exclude=*stim*")
+        rsync_cmd += [rsync_src, rsync_dst]
+
+        rsync_output = subprocess.run(rsync_cmd)
         print(rsync_output)
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
