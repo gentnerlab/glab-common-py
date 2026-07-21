@@ -40,6 +40,26 @@ if "magpi" in hostname:
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
 data_folder = "/home/bird/opdat"
 
+
+def format_outline(box, bird, proc, trials=0, feeds=0, TOs=0, noRs=0,
+                    feed_errs=("0", "0", "0", "0"), last_feed="N/A",
+                    datediff="(no data)"):
+    # Always 9 tab-separated fields (box, bird, behav, trials, feeds, TOs,
+    # noRs, FeedErrs, LastFeed) -- website_update_utils.py's
+    # get_allsummary_on_server() builds a DataFrame with a hardcoded 9-column
+    # list from this file's lines, and raises on any row with a different
+    # field count.
+    return (
+        "%s\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  "
+        "\tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
+        % (
+            box, bird, proc, trials, feeds, TOs, noRs,
+            feed_errs[0], feed_errs[1], feed_errs[2], feed_errs[3],
+            last_feed, datediff,
+        )
+    )
+
+
 with open("/home/bird/all.summary", "w") as as_file:
     as_file.write(
         "this all.summary generated at %s\n" % (dt.datetime.now().strftime("%x %X"))
@@ -54,7 +74,7 @@ with open("/home/bird/all.summary", "w") as as_file:
             # make sure box is a string
             box = str(box)
             if proc in ("shape", "lights", "pylights", "lights.py"):
-                as_file.write("%s\tB%d\t %s\n" % (box, bird, proc))
+                as_file.write(format_outline(box, bird, proc, datediff="(non-trial box)"))
             else:
                 summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
                 with open(summaryfname, "rt") as sdat:
@@ -89,27 +109,17 @@ with open("/home/bird/all.summary", "w") as as_file:
                     minutes_ago = (dt.datetime.now() - last_trial_time).seconds / 60
                     datediff = "(%d mins ago)" % (minutes_ago)
 
-                outline = (
-                    "%s\tB%d\t %s  \ttrls=%s  \tfeeds=%d  \tTOs=%d  \tnoRs=%d  \tFeedErrs=(%s,%s,%s,%s)  \tlast @ %s %s\n"
-                    % (
-                        box,
-                        bird,
-                        proc,
-                        trials_run,
-                        feeder_ops,
-                        TOs,
-                        noRs,
-                        hopper_failures,
-                        godown_failures,
-                        goup_failures,
-                        resp_feed,
-                        last_trial_time.strftime("%x %X"),
-                        datediff,
-                    )
+                outline = format_outline(
+                    box, bird, proc,
+                    trials=trials_run,
+                    feeds=feeder_ops,
+                    TOs=TOs,
+                    noRs=noRs,
+                    feed_errs=(hopper_failures, godown_failures, goup_failures, resp_feed),
+                    last_feed=last_trial_time.strftime("%x %X"),
+                    datediff=datediff,
                 )
                 as_file.write(outline)
         except Exception as e:
-            as_file.write(
-                "%s\tB%d\t Error opening SummaryDat or incorrect format\n" % (box, bird)
-            )
+            as_file.write(format_outline(box, bird, proc, datediff="(error, see allsummary.log)"))
             print(e)
