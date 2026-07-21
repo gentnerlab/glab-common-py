@@ -34,7 +34,7 @@ if "magpi" in hostname:
         rsync_dst = "/home/bird/opdat/"
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
-        rsync_output = subprocess.run(["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=stims", "--exclude=stimuli", "--exclude=cdp_stimuli", rsync_src, rsync_dst])
+        rsync_output = subprocess.run(["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=stims", "--exclude=stimuli", "--exclude=cdp_stimuli", "--exclude=song_recog_stimuli", rsync_src, rsync_dst])
         print(rsync_output)
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
