@@ -60,20 +60,25 @@ hostname = os.uname()[1]
 if "magpi" in hostname:
     stim_excludes = load_stim_excludes()
     for box_hostname, bird_num in zip(box_nums, bird_nums):
-        rsync_src = "bird@{}:{}".format(box_hostname, OPDAT_ROOT)
-        rsync_dst = OPDAT_ROOT
+        # Only pull the active subject's own folder, not the box's whole
+        # opdat/ tree -- a box accumulates a folder for every subject
+        # that's ever run there (confirmed live: magpi20's opdat/ still had
+        # 8 other birds' folders alongside its current one), and no client
+        # ever runs more than one bird at a time, so those other folders
+        # are orphaned and generate no new data. Pulling the whole tree
+        # meant re-pulling all of that (plus any box-level shared stim
+        # dirs) on every run.
+        subj = "B%d" % bird_num
+        rsync_src = "bird@{}:{}{}/".format(box_hostname, OPDAT_ROOT, subj)
+        rsync_dst = "{}{}/".format(OPDAT_ROOT, subj)
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
 
-        # Always exclude by name (*stim*) -- a box's opdat/ tree accumulates
-        # stim dirs from every subject that's ever run there, not just the
-        # one currently in panel_subject_behavior, so the config-resolved
-        # path below only ever covers the *current* subject's stim dir.
-        # Every real stim dir name seen so far (stims, stimuli, cdp_stimuli,
-        # song_recog_stimuli, test_stimulus_set, stimulus_set, ...) contains
-        # "stim", so this is the real safety net; the resolved path is
-        # exact-match precision on top of it, for stim_path values that
-        # might not follow that naming pattern.
+        # Always exclude by name (*stim*) -- every real stim dir name seen
+        # so far (stims, stimuli, cdp_stimuli, stimulus_set, ...) contains
+        # "stim", so this is the safety net for the common case; the
+        # config-resolved path below is exact-match precision on top of
+        # it, for a subject whose stim_path doesn't follow that pattern.
         rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=*stim*"]
         stim_exclude = stim_excludes.get(box_hostname)
         if stim_exclude:
