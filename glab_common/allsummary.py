@@ -6,7 +6,6 @@ import warnings
 import subprocess
 import os
 import sys
-import json
 
 process_fname = "/home/bird/opdat/panel_subject_behavior"
 
@@ -27,57 +26,53 @@ with open(process_fname, "rt") as psb_file:
 
 
 OPDAT_ROOT = "/home/bird/opdat/"
+STIM_EXCLUDES_FNAME = "/home/bird/opdat/panel_stim_excludes"
 
 
-def get_remote_stim_exclude(box_hostname, bird_num, timeout=8):
-    """SSH in and read this subject's config.json to find its real stim_path
-    (explicit, or pyoperant's own default of <experiment_path>/stims -- see
-    pyoperant.behavior.base.BaseExp.__init__), and turn it into an rsync
-    --exclude pattern anchored to opdat/'s root so it only matches this
-    subject's own stim dir, not anything else in the tree.
+def load_stim_excludes(loc=STIM_EXCLUDES_FNAME):
+    """Reads rpioperantctl's panel_stim_excludes file (panel, subj, exclude
+    -- tab-separated, one row per panel) and returns {panel: exclude}.
+    rpioperantctl already SSHes into every panel every 5 min to check
+    running processes, and resolves each subject's real stim_path from its
+    config.json (explicit, or pyoperant's own <experiment_path>/stims
+    default) as part of that same connection -- so allsummary.py just reads
+    the result here instead of opening its own SSH connections to redo that
+    lookup on every 15-min run.
 
-    Returns None if the config can't be read (box unreachable, no config.json
-    -- e.g. a lights/shape box) or the subject's stim_path isn't under
-    opdat/ at all, so callers can fall back to a generic exclude instead.
+    Returns {} if the file doesn't exist yet (e.g. rpioperantctl hasn't run
+    since this was added) so callers can fall back to a generic exclude.
     """
-    remote_config = "{}B{}/config.json".format(OPDAT_ROOT, bird_num)
+    excludes = {}
     try:
-        result = subprocess.run(
-            ["ssh", "-o", "ConnectTimeout={}".format(timeout),
-             "bird@{}".format(box_hostname), "cat", remote_config],
-            capture_output=True, text=True, timeout=timeout + 5,
-        )
-        if result.returncode != 0 or not result.stdout.strip():
-            return None
-        config = json.loads(result.stdout)
-    except (subprocess.TimeoutExpired, json.JSONDecodeError, OSError):
-        return None
-
-    experiment_path = config.get("experiment_path") or "{}B{}".format(OPDAT_ROOT, bird_num)
-    stim_path = config.get("stim_path") or os.path.join(experiment_path, "stims")
-
-    if stim_path.startswith(OPDAT_ROOT):
-        return "/" + stim_path[len(OPDAT_ROOT):]
-    return None  # stim_path lives outside opdat/, nothing to exclude here
+        with open(loc, "rt") as f:
+            for line in f:
+                parts = line.rstrip("\n").split("\t")
+                if len(parts) == 3:
+                    panel, subj, stim_exclude = parts
+                    excludes[panel] = stim_exclude
+    except OSError:
+        pass
+    return excludes
 
 
 # rsync magpis
 hostname = os.uname()[1]
 if "magpi" in hostname:
+    stim_excludes = load_stim_excludes()
     for box_hostname, bird_num in zip(box_nums, bird_nums):
         rsync_src = "bird@{}:{}".format(box_hostname, OPDAT_ROOT)
         rsync_dst = OPDAT_ROOT
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
 
-        stim_exclude = get_remote_stim_exclude(box_hostname, bird_num)
+        stim_exclude = stim_excludes.get(box_hostname)
         rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs"]
         if stim_exclude:
             rsync_cmd.append("--exclude={}".format(stim_exclude))
         else:
-            # Config unreadable (unreachable box, no config.json, etc.) --
-            # fall back to the name-based heuristic rather than pulling
-            # stimulus libraries unfiltered.
+            # No entry yet (rpioperantctl hasn't run/written it), or its
+            # lookup failed for this panel -- fall back to the name-based
+            # heuristic rather than pulling stimulus libraries unfiltered.
             rsync_cmd.append("--exclude=*stim*")
         rsync_cmd += [rsync_src, rsync_dst]
 
