@@ -22,7 +22,11 @@ with open(process_fname, "rt") as psb_file:
             if spl_line[1] == "1":  # box enabled
                 box_nums.append(spl_line[0])
                 bird_nums.append(int(spl_line[2]))
-                processes.append(spl_line[4])
+                # The command field is multi-word (e.g. "behave -P 1 -S <3>
+                # Lights"), with the actual behavior/protocol name as its
+                # last token -- spl_line[4] would just be the literal
+                # string "behave" every time.
+                processes.append(spl_line[-1])
 
 
 OPDAT_ROOT = "/home/bird/opdat/"
@@ -124,7 +128,7 @@ with open("/home/bird/all.summary", "w") as as_file:
         try:
             # make sure box is a string
             box = str(box)
-            if proc in ("shape", "lights", "pylights", "lights.py"):
+            if proc.lower() in ("shape", "lights", "pylights", "lights.py"):
                 as_file.write(format_outline(box, bird, proc, datediff="(non-trial box)"))
             else:
                 summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
