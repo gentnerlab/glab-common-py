@@ -6,6 +6,7 @@ import warnings
 import subprocess
 import os
 import sys
+import json
 
 process_fname = "/home/bird/opdat/panel_subject_behavior"
 
@@ -31,6 +32,7 @@ with open(process_fname, "rt") as psb_file:
 
 OPDAT_ROOT = "/home/bird/opdat/"
 STIM_EXCLUDES_FNAME = "/home/bird/opdat/panel_stim_excludes"
+SYNC_STATE_FNAME = "/home/bird/opdat/.allsummary_sync_state.json"
 
 
 def load_stim_excludes(loc=STIM_EXCLUDES_FNAME):
@@ -59,38 +61,103 @@ def load_stim_excludes(loc=STIM_EXCLUDES_FNAME):
     return excludes
 
 
+def load_sync_state(loc=SYNC_STATE_FNAME):
+    """Returns {"last_mapping": {box: bird}, "pending_stragglers": [[box, bird], ...]}
+    from the previous run, so a bird that gets swapped out of
+    panel_subject_behavior between rsync cycles (its box now points at a
+    new/no bird) can still get one final catch-up pull instead of being
+    silently dropped -- see sync_subject()/the main sync loop below.
+    Returns empty defaults if the file doesn't exist yet (first run).
+    """
+    try:
+        with open(loc, "rt") as f:
+            state = json.load(f)
+    except (OSError, json.JSONDecodeError):
+        state = {}
+    state.setdefault("last_mapping", {})
+    state.setdefault("pending_stragglers", [])
+    return state
+
+
+def save_sync_state(last_mapping, pending_stragglers, loc=SYNC_STATE_FNAME):
+    with open(loc, "wt") as f:
+        json.dump(
+            {"last_mapping": last_mapping, "pending_stragglers": pending_stragglers},
+            f,
+        )
+
+
+def sync_subject(box_hostname, bird_num, stim_exclude=None):
+    """rsyncs one subject's own opdat/<subj>/ folder from its box. Returns
+    True on success (rsync returncode 0), so callers can tell whether a
+    straggler pull actually caught up or still needs retrying next cycle.
+    """
+    subj = "B%d" % bird_num
+    rsync_src = "bird@{}:{}{}/".format(box_hostname, OPDAT_ROOT, subj)
+    rsync_dst = "{}{}/".format(OPDAT_ROOT, subj)
+    print("Rsync src: {}".format(rsync_src), file=sys.stderr)
+    print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
+
+    # Always exclude by name (*stim*) -- every real stim dir name seen
+    # so far (stims, stimuli, cdp_stimuli, stimulus_set, ...) contains
+    # "stim", so this is the safety net for the common case; the
+    # config-resolved path (when given) is exact-match precision on top
+    # of it, for a subject whose stim_path doesn't follow that pattern.
+    rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=*stim*"]
+    if stim_exclude:
+        rsync_cmd.append("--exclude={}".format(stim_exclude))
+    rsync_cmd += [rsync_src, rsync_dst]
+
+    rsync_output = subprocess.run(rsync_cmd)
+    print(rsync_output)
+    return rsync_output.returncode == 0
+
+
 # rsync magpis
 hostname = os.uname()[1]
 if "magpi" in hostname:
     stim_excludes = load_stim_excludes()
-    for box_hostname, bird_num in zip(box_nums, bird_nums):
-        # Only pull the active subject's own folder, not the box's whole
-        # opdat/ tree -- a box accumulates a folder for every subject
-        # that's ever run there (confirmed live: magpi20's opdat/ still had
-        # 8 other birds' folders alongside its current one), and no client
-        # ever runs more than one bird at a time, so those other folders
-        # are orphaned and generate no new data. Pulling the whole tree
-        # meant re-pulling all of that (plus any box-level shared stim
-        # dirs) on every run.
-        subj = "B%d" % bird_num
-        rsync_src = "bird@{}:{}{}/".format(box_hostname, OPDAT_ROOT, subj)
-        rsync_dst = "{}{}/".format(OPDAT_ROOT, subj)
-        print("Rsync src: {}".format(rsync_src), file=sys.stderr)
-        print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
+    current_mapping = dict(zip(box_nums, bird_nums))
 
-        # Always exclude by name (*stim*) -- every real stim dir name seen
-        # so far (stims, stimuli, cdp_stimuli, stimulus_set, ...) contains
-        # "stim", so this is the safety net for the common case; the
-        # config-resolved path below is exact-match precision on top of
-        # it, for a subject whose stim_path doesn't follow that pattern.
-        rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=*stim*"]
-        stim_exclude = stim_excludes.get(box_hostname)
-        if stim_exclude:
-            rsync_cmd.append("--exclude={}".format(stim_exclude))
-        rsync_cmd += [rsync_src, rsync_dst]
+    # Only pull each box's active subject's own folder, not its whole
+    # opdat/ tree -- a box accumulates a folder for every subject that's
+    # ever run there (confirmed live: magpi20's opdat/ still had 8 other
+    # birds' folders alongside its current one), and no client ever runs
+    # more than one bird at a time, so those other folders are orphaned
+    # and generate no new data. Pulling the whole tree meant re-pulling
+    # all of that (plus any box-level shared stim dirs) on every run.
+    #
+    # But narrowing to just the *current* mapping means a bird that gets
+    # swapped out of panel_subject_behavior between rsync cycles (its box
+    # now points at a new/no bird) would never get synced again, silently
+    # dropping however much of its final session hadn't been pulled yet.
+    # So: compare this run's mapping to the previous one, and give any
+    # box whose bird changed one more pull of the *old* bird's folder,
+    # keeping it queued (retried every cycle) until that pull actually
+    # succeeds -- self-healing if the box happened to be unreachable
+    # exactly when the swap happened.
+    sync_state = load_sync_state()
+    pending_stragglers = [tuple(p) for p in sync_state["pending_stragglers"]]
+    for box_hostname, old_bird in sync_state["last_mapping"].items():
+        if current_mapping.get(box_hostname) != old_bird:
+            straggler = (box_hostname, old_bird)
+            if straggler not in pending_stragglers:
+                pending_stragglers.append(straggler)
 
-        rsync_output = subprocess.run(rsync_cmd)
-        print(rsync_output)
+    for box_hostname, bird_num in current_mapping.items():
+        sync_subject(box_hostname, bird_num, stim_exclude=stim_excludes.get(box_hostname))
+
+    still_pending = []
+    for box_hostname, bird_num in pending_stragglers:
+        print("Straggler catch-up: {} / B{}".format(box_hostname, bird_num), file=sys.stderr)
+        # Not using stim_excludes here -- that's resolved from the box's
+        # *current* subject's config.json, which may not match the
+        # departed bird's own stim_path. The *stim* glob alone still
+        # applies inside sync_subject().
+        if not sync_subject(box_hostname, bird_num):
+            still_pending.append([box_hostname, bird_num])
+
+    save_sync_state(current_mapping, still_pending)
 
 subjects = ["B%d" % (bird_num) for bird_num in bird_nums]
 data_folder = "/home/bird/opdat"
