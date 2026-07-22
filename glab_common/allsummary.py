@@ -192,56 +192,73 @@ with open("/home/bird/all.summary", "w") as as_file:
 
     # Now loop through each bird and grab the error info from each summaryDAT file
     for (box, bird, proc) in zip(box_nums, bird_nums, processes):
+        box = str(box)
         try:
-            # make sure box is a string
-            box = str(box)
             if proc.lower() in ("shape", "lights", "pylights", "lights.py"):
                 as_file.write(format_outline(box, bird, proc, datediff="(non-trial box)"))
-            else:
-                summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
+                continue
+
+            summaryfname = "/home/bird/opdat/B%d/%d.summaryDAT" % (bird, bird)
+            try:
                 with open(summaryfname, "rt") as sdat:
                     sdata = sdat.read()
+            except FileNotFoundError:
+                # brand-new subject -- pyoperant hasn't written a
+                # summaryDAT yet, not a parse failure
+                as_file.write(format_outline(box, bird, proc, datediff="(new subject, no data yet)"))
+                continue
 
-                m = re.search(r"failures today: (\w+)", sdata)
-                hopper_failures = m.group(1)
-                m = re.search(r"down failures today: (\w+)", sdata)
-                godown_failures = m.group(1)
-                m = re.search(r"up failures today: (\w+)", sdata)
-                goup_failures = m.group(1)
-                m = re.search(r"Responses during feed: (\w+)", sdata)
-                resp_feed = m.group(1)
+            m = re.search(r"failures today: (\w+)", sdata)
+            hopper_failures = m.group(1)
+            m = re.search(r"down failures today: (\w+)", sdata)
+            godown_failures = m.group(1)
+            m = re.search(r"up failures today: (\w+)", sdata)
+            goup_failures = m.group(1)
+            m = re.search(r"Responses during feed: (\w+)", sdata)
+            resp_feed = m.group(1)
 
-                subj = "B%d" % (bird)
-                with warnings.catch_warnings():
-                    warnings.simplefilter("ignore")
-                    behav_data = load_data_pandas([subj], data_folder)
-                df = behav_data[subj]
-                # df = df[~pd.isnull(data.index)]
-                todays_data = df[
-                    (df.index.date - dt.datetime.today().date()) == dt.timedelta(days=0)
-                ]
-                feeder_ops = sum(todays_data["reward"].values)
-                trials_run = len(todays_data)
-                noRs = sum(todays_data["response"].values == "none")
-                TOs = trials_run - feeder_ops - noRs
+            subj = "B%d" % (bird)
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                behav_data = load_data_pandas([subj], data_folder)
+            df = behav_data[subj]
+            # df = df[~pd.isnull(data.index)]
+            todays_data = df[
+                (df.index.date - dt.datetime.today().date()) == dt.timedelta(days=0)
+            ]
+            feeder_ops = sum(todays_data["reward"].values)
+            trials_run = len(todays_data)
+            noRs = sum(todays_data["response"].values == "none")
+            TOs = trials_run - feeder_ops - noRs
+
+            try:
                 last_trial_time = todays_data.sort_index().tail().index[-1]
                 if last_trial_time.day != dt.datetime.now().day:
                     datediff = "(not today)"
                 else:
                     minutes_ago = (dt.datetime.now() - last_trial_time).seconds / 60
                     datediff = "(%d mins ago)" % (minutes_ago)
+                last_feed = last_trial_time.strftime("%x %X")
+            except IndexError:
+                # a real trial-based experiment with genuinely zero
+                # trials recorded yet today -- a normal, expected state,
+                # not a parse failure. trials_run/feeder_ops/noRs/TOs
+                # above are already correctly 0 in this case; only the
+                # last-trial-time fields need a placeholder.
+                last_feed = "N/A"
+                datediff = "(no trials yet today)"
 
-                outline = format_outline(
-                    box, bird, proc,
-                    trials=trials_run,
-                    feeds=feeder_ops,
-                    TOs=TOs,
-                    noRs=noRs,
-                    feed_errs=(hopper_failures, godown_failures, goup_failures, resp_feed),
-                    last_feed=last_trial_time.strftime("%x %X"),
-                    datediff=datediff,
-                )
-                as_file.write(outline)
+            outline = format_outline(
+                box, bird, proc,
+                trials=trials_run,
+                feeds=feeder_ops,
+                TOs=TOs,
+                noRs=noRs,
+                feed_errs=(hopper_failures, godown_failures, goup_failures, resp_feed),
+                last_feed=last_feed,
+                datediff=datediff,
+            )
+            as_file.write(outline)
         except Exception as e:
             as_file.write(format_outline(box, bird, proc, datediff="(error, see allsummary.log)"))
             print(e)
