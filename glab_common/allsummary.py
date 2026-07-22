@@ -65,15 +65,19 @@ if "magpi" in hostname:
         print("Rsync src: {}".format(rsync_src), file=sys.stderr)
         print("Rsync dest: {}".format(rsync_dst), file=sys.stderr)
 
+        # Always exclude by name (*stim*) -- a box's opdat/ tree accumulates
+        # stim dirs from every subject that's ever run there, not just the
+        # one currently in panel_subject_behavior, so the config-resolved
+        # path below only ever covers the *current* subject's stim dir.
+        # Every real stim dir name seen so far (stims, stimuli, cdp_stimuli,
+        # song_recog_stimuli, test_stimulus_set, stimulus_set, ...) contains
+        # "stim", so this is the real safety net; the resolved path is
+        # exact-match precision on top of it, for stim_path values that
+        # might not follow that naming pattern.
+        rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs", "--exclude=*stim*"]
         stim_exclude = stim_excludes.get(box_hostname)
-        rsync_cmd = ["rsync", "-avhW", "--exclude=Generated_Songs"]
         if stim_exclude:
             rsync_cmd.append("--exclude={}".format(stim_exclude))
-        else:
-            # No entry yet (rpioperantctl hasn't run/written it), or its
-            # lookup failed for this panel -- fall back to the name-based
-            # heuristic rather than pulling stimulus libraries unfiltered.
-            rsync_cmd.append("--exclude=*stim*")
         rsync_cmd += [rsync_src, rsync_dst]
 
         rsync_output = subprocess.run(rsync_cmd)
