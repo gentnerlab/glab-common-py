@@ -36,14 +36,14 @@ SYNC_STATE_FNAME = "/home/bird/opdat/.allsummary_sync_state.json"
 
 
 def load_stim_excludes(loc=STIM_EXCLUDES_FNAME):
-    """Reads rpioperantctl's panel_stim_excludes file (panel, subj, exclude
-    -- tab-separated, one row per panel) and returns {panel: exclude}.
-    rpioperantctl already SSHes into every panel every 5 min to check
-    running processes, and resolves each subject's real stim_path from its
-    config.json (explicit, or pyoperant's own <experiment_path>/stims
-    default) as part of that same connection -- so allsummary.py just reads
-    the result here instead of opening its own SSH connections to redo that
-    lookup on every 15-min run.
+    """Reads rpioperantctl's panel_stim_excludes file (magpi_host, subj,
+    exclude -- tab-separated, one row per host) and returns
+    {magpi_host: exclude}. rpioperantctl already SSHes into every host
+    every 5 min to check running processes, and resolves each subject's
+    real stim_path from its config.json (explicit, or pyoperant's own
+    <experiment_path>/stims default) as part of that same connection --
+    so allsummary.py just reads the result here instead of opening its
+    own SSH connections to redo that lookup on every 15-min run.
 
     Returns {} if the file doesn't exist yet (e.g. rpioperantctl hasn't run
     since this was added) so callers can fall back to a generic exclude.
@@ -54,8 +54,8 @@ def load_stim_excludes(loc=STIM_EXCLUDES_FNAME):
             for line in f:
                 parts = line.rstrip("\n").split("\t")
                 if len(parts) == 3:
-                    panel, subj, stim_exclude = parts
-                    excludes[panel] = stim_exclude
+                    magpi_host, subj, stim_exclude = parts
+                    excludes[magpi_host] = stim_exclude
     except OSError:
         pass
     return excludes
